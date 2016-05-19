@@ -25,7 +25,6 @@ if($_SERVER['REQUEST_METHOD'] == "POST") {
         } catch (\GIS\InvalidCredentialsException $e) {
             $error = "Username or Password invalid";
         } catch (Exception $e) {
-            echo $e;
             $error = "There was an unknown error while checking your credentials. Most probably this is a temporary error.";
         }
 
