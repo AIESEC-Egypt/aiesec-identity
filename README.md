@@ -1,5 +1,5 @@
-# AIESEC OAuth Wrapper
-php web service which wraps the GIS Identity Service (auth.aiesec.org) to be used with different systems
+# AIESEC Identity
+php web service which wraps the GIS Identity Service (auth.aiesec.org) to be used with different systems via oAuth 2 token flow
 
 ## Installation
 1. clone the git repository into your web root
