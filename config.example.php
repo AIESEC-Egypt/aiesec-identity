@@ -14,7 +14,7 @@ define("MYSQL_PASS", "");
 define("MYSQL_DB", "");
 
 // plugins (just the names in the array)
-$ACTIVE_PLUGINS = array();
+$ACTIVE_PLUGINS = array('active');
 
 // sites
 $SITES = array(
