@@ -39,6 +39,10 @@ if(!isset($_SESSION['access_token']) || $_SESSION['expires_at'] <= time()) {
                         $error = "Connection to Database failed";
                         trigger_error("Could not connect to database: " . $conn->error, E_USER_ERROR);
                     } else {
+                        if($conn->query("DELETE FROM `access_tokens` WHERE `expires_at` <= NOW()") !== TRUE) {
+                            trigger_error("Could not delete old access tokens: " . $conn->error, E_USER_WARNING);
+                        }
+
                         if ($result = $conn->query("SELECT `scope`.`name` as scope, GROUP_CONCAT(`role`.`name` SEPARATOR ';') as roles FROM `persons_scopes` LEFT JOIN `scopes` scope ON `scope`.`id`=`persons_scopes`.`scope_id` LEFT JOIN `roles` role ON `role`.`id`=`persons_scopes`.`role_id` WHERE `persons_scopes`.`person_id` = " . intval($_SESSION['person_id']) . " AND (`expires_at` > NOW() OR `expires_at` IS NULL) GROUP BY `persons_scopes`.`scope_id`")) {
                             $conn->close();
 
