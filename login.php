@@ -4,12 +4,14 @@
  * Login Form and login routine
  * 
  * @author Karl Johann Schubert <karljohann@familieschubi.de>
- * @version 0.1
+ * @version 0.2
  */
 
 $error = false;
 
-if($_SERVER['REQUEST_METHOD'] == "POST") {
+if(!is_writeable(dirname(__FILE__) . '/sessions/')) {
+    $error = "Fatal Error. Please contact the administrator";
+} elseif($_SERVER['REQUEST_METHOD'] == "POST") {
     if(isset($_POST['username']) && isset($_POST['password'])) {
         require_once(dirname(__FILE__) . '/plugins/plugin.runner.php');
         require_once(dirname(__FILE__) . '/PHP-GIS-Wrapper/gis-wrapper/AuthProviderCombined.php');
@@ -20,8 +22,9 @@ if($_SERVER['REQUEST_METHOD'] == "POST") {
 
         // login to GIS
         $user = new \GIS\AuthProviderCombined($_POST['username'], $_POST['password'], false);
+        $user->setSession(dirname(__FILE__) . '/sessions/' . md5(microtime()) . ".txt");
         try {
-            $token = $user->getToken();
+            $user->getToken();
         } catch (\GIS\InvalidCredentialsException $e) {
             $error = "Username or Password invalid";
         } catch (Exception $e) {
@@ -58,45 +61,29 @@ if($_SERVER['REQUEST_METHOD'] == "POST") {
                 }
 
                 if(!$error && $conn->query($query) === TRUE) {
-                    $query = "INSERT INTO `access_tokens` (`access_token`, `person_id`, `person`, `current_offices`, `current_positions`, `current_teams`) VALUES (";
-                    $query .= "'" . $conn->real_escape_string($token) . "', ";
-                    $query .= intval($user->getCurrentPerson()->person->id) . ", ";
-                    $query .= "'" . $conn->real_escape_string(json_encode($user->getCurrentPerson()->person)) . "', ";
-                    $query .= "'" . $conn->real_escape_string(json_encode($user->getCurrentPerson()->current_offices)) . "', ";
-                    $query .= "'" . $conn->real_escape_string(json_encode($user->getCurrentPerson()->current_positions)) . "', ";
-                    $query .= "'" . $conn->real_escape_string(json_encode($user->getCurrentPerson()->current_teams)) . "'";
-                    $query .=");";
+                    if($PR->onLogin($user, $conn)) {
+                        // close mysql connection
+                        $conn->close();
 
-                    if($conn->query($query) === TRUE) {
-                        if($PR->onLogin($user, $conn)) {
-                            // close mysql connection
-                            $conn->close();
+                        // start session
+                        session_start();
 
-                            // start session
-                            session_start();
+                        // generate redirect link
+                        $redirect = 'index.php';
+                        if(isset($_SESSION['redirect'])) $redirect = $_SESSION['redirect'];
 
-                            // generate redirect link
-                            $redirect = 'index.php';
-                            if(isset($_SESSION['redirect'])) $redirect = $_SESSION['redirect'];
+                        // clear session
+                        $_SESSION = array();
 
-                            // clear session
-                            $_SESSION = array();
+                        // set session data
+                        $_SESSION['person_id'] = intval($user->getCurrentPerson()->person->id);
+                        $_SESSION['full_name'] = $user->getCurrentPerson()->person->full_name;
+                        $_SESSION['gis-identity-session'] = $user->getSession();
 
-                            // set session data
-                            $_SESSION['access_token'] = $token;
-                            $_SESSION['expires_at'] = $user->getExpiresAt();
-                            $_SESSION['person_id'] = intval($user->getCurrentPerson()->person->id);
-                            $_SESSION['full_name'] = $user->getCurrentPerson()->person->full_name;
-
-                            // redirect
-                            header('Location: ' . $redirect);
-                        } else {
-                            $error = "Plugin prevented login";
-                            $conn->close();
-                        }
+                        // redirect
+                        header('Location: ' . $redirect);
                     } else {
-                        $error = "Database Error";
-                        trigger_error("Database Error: " . $conn->error, E_USER_ERROR);
+                        $error = "Plugin prevented login";
                         $conn->close();
                     }
                 } else {

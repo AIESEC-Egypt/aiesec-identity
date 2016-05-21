@@ -4,7 +4,7 @@
  * destroy session and redirect to front page
  * 
  * @author Karl Johann Schubert <karljohann@familieschubi.de>
- * @version 0.1
+ * @version 0.2
  */
 
 $error = false;
@@ -21,8 +21,13 @@ if (!$conn) {
 } else {
     $p = new PluginRunner($ACTIVE_PLUGINS);
     if($p->onBeforeLogout($_SESSION['access_token'], $_SESSION['person_id'])) {
-        if($conn->query("DELETE FROM `access_tokens` WHERE `access_token`='" . $conn->real_escape_string($_SESSION['access_token']) . "' OR `expires_at` <= NOW()") === TRUE) {
+        if($conn->query("DELETE FROM `access_tokens` WHERE `person_id`='" . intval($_SESSION['person_id']) . "' OR `expires_at` <= NOW()") === TRUE) {
             $conn->close();
+
+            // remove GIS Identity Session
+            if(file_exists($_SESSION['gis-identity-session'])) {
+                unlink($_SESSION['gis-identity-session']);
+            }
 
             // Unset all of the session variables.
             $_SESSION = array();

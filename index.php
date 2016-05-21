@@ -4,12 +4,12 @@
  * Front Page of AIESEC Identity with informations about the current user
  *
  * @author Karl Johann Schubert <karljohann@familieschubi.de>
- * @version 0.1
+ * @version 0.2
  */
 
 session_start();
 
-if(!isset($_SESSION['access_token']) || $_SESSION['expires_at'] <= time()) :
+if(!isset($_SESSION['gis-identity-session']) || !file_exists($_SESSION['gis-identity-session'])) :
     header('Location: login.php');
 else :
     require_once(dirname(__FILE__) . '/plugins/plugin.runner.php');

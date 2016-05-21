@@ -4,18 +4,15 @@
  * token based oAuth2 flow
  *
  * @author Karl Johann Schubert <karljohann@familieschubi.de>
- * @version 0.1
+ * @version 0.2
  */
 
 session_start();
 $error = false;
 
-if(!isset($_SESSION['access_token']) || $_SESSION['expires_at'] <= time()) {
-    $_SESSION = array();
-    $_SESSION['redirect'] = 'authorize.php?response_type=' . urlencode(getParam('response_type')) . '&redirect_uri=' . urlencode(getParam('redirect_uri')) . '&client_id=' . urlencode(getParam('client_id')) . '&scope=' . urlencode(getParam('scope')) . '&state=' . urlencode(getParam('state'));
-    header('Location: login.php');
-} else {
+if(isset($_SESSION['gis-identity-session']) && file_exists($_SESSION['gis-identity-session'])) {
     require_once(dirname(__FILE__) . '/config.php');
+    require_once(dirname(__FILE__) . '/PHP-GIS-Wrapper/gis-wrapper/AuthProviderCombined.php');
 
     // check response type
     if(getParam('response_type') == "token") {
@@ -44,8 +41,6 @@ if(!isset($_SESSION['access_token']) || $_SESSION['expires_at'] <= time()) {
                         }
 
                         if ($result = $conn->query("SELECT `scope`.`name` as scope, GROUP_CONCAT(`role`.`name` SEPARATOR ';') as roles FROM `persons_scopes` LEFT JOIN `scopes` scope ON `scope`.`id`=`persons_scopes`.`scope_id` LEFT JOIN `roles` role ON `role`.`id`=`persons_scopes`.`role_id` WHERE `persons_scopes`.`person_id` = " . intval($_SESSION['person_id']) . " AND (`expires_at` > NOW() OR `expires_at` IS NULL) GROUP BY `persons_scopes`.`scope_id`")) {
-                            $conn->close();
-
                             $scopes = array();
                             if ($result->num_rows > 0) {
                                 while ($row = $result->fetch_row()) {
@@ -72,13 +67,51 @@ if(!isset($_SESSION['access_token']) || $_SESSION['expires_at'] <= time()) {
                             if($missed) {
                                 $error = "You don't have enough rights to access this site";
                             } else {
-                                header('Location: ' . $RU . '?access_token=' . $_SESSION['access_token'] . '&expires_at=' . urlencode(date('c', $_SESSION['expires_at'])) . '&expires_in=' . ($_SESSION['expires_at'] - time()));
+                                $user = new \GIS\AuthProviderCombined("", "", false);
+                                $user->setSession($_SESSION['gis-identity-session']);
+                                try {
+                                    $token = $user->getToken();
+                                } catch(\GIS\InvalidCredentialsException $e) {
+                                    $token = null;
+                                } catch(Exception $e) {
+                                    $token = null;
+                                    $error = "It seems like there is a temporary error";
+                                    trigger_error("Could not get access token: " . $e);
+                                }
+                                if($token != null) {
+                                    if($user->getCurrentPerson()->person->id == $_SESSION['person_id']) {
+                                        $query = "INSERT INTO `access_tokens` (`access_token`, `expires_at`, `person_id`, `person`, `current_offices`, `current_positions`, `current_teams`) VALUES (";
+                                        $query .= "'" . $conn->real_escape_string($token) . "', ";
+                                        $query .= "FROM_UNIXTIME(" . intval($user->getExpiresAt()) . "), ";
+                                        $query .= intval($user->getCurrentPerson()->person->id) . ", ";
+                                        $query .= "'" . $conn->real_escape_string(json_encode($user->getCurrentPerson()->person)) . "', ";
+                                        $query .= "'" . $conn->real_escape_string(json_encode($user->getCurrentPerson()->current_offices)) . "', ";
+                                        $query .= "'" . $conn->real_escape_string(json_encode($user->getCurrentPerson()->current_positions)) . "', ";
+                                        $query .= "'" . $conn->real_escape_string(json_encode($user->getCurrentPerson()->current_teams)) . "'";
+                                        $query .=");";
+                                        if($conn->query($query) === TRUE) {
+                                            header('Location: ' . $RU . '?access_token=' . $token . '&expires_at=' . urlencode(date('c', $user->getExpiresAt())) . '&expires_in=' . ($user->getExpiresAt() - time()));
+                                        } else {
+                                            $error = "Database Error";
+                                            trigger_error("Could not save access token: " . $conn->error, E_USER_ERROR);
+                                        }
+                                    } else {
+                                        $error = "Unexpected response from the GIS";
+                                    }
+                                } elseif (!$error) {
+                                    if(file_exists($_SESSION['gis-identity-session'])) {
+                                        unlink($_SESSION['gis-identity-session']);
+                                    }
+                                    $_SESSION = array();
+                                    $_SESSION['redirect'] = 'authorize.php?response_type=' . urlencode(getParam('response_type')) . '&redirect_uri=' . urlencode(getParam('redirect_uri')) . '&client_id=' . urlencode(getParam('client_id')) . '&scope=' . urlencode(getParam('scope')) . '&state=' . urlencode(getParam('state'));
+                                    header('Location: login.php');
+                                }
                             }
                         } else {
                             $error = "Database Error";
                             trigger_error("Could not retrieve scopes: " . $conn->error, E_USER_ERROR);
-                            $conn->close();
                         }
+                        $conn->close();
                     }
                 } else {
                     header('Location: ' . $RU . '?access_token=' . $_SESSION['access_token'] . '&expires_at=' . urlencode(date('c', $_SESSION['expires_at'])) . '&expires_in=' . ($_SESSION['expires_at'] - time()));
@@ -92,6 +125,10 @@ if(!isset($_SESSION['access_token']) || $_SESSION['expires_at'] <= time()) {
     } else {
         $error = "Malformed Request. Response Type not implemented";
     }
+} else {
+    $_SESSION = array();
+    $_SESSION['redirect'] = 'authorize.php?response_type=' . urlencode(getParam('response_type')) . '&redirect_uri=' . urlencode(getParam('redirect_uri')) . '&client_id=' . urlencode(getParam('client_id')) . '&scope=' . urlencode(getParam('scope')) . '&state=' . urlencode(getParam('state'));
+    header('Location: login.php');
 }
 
 function getParam($name, $default = "") {
