@@ -67,7 +67,7 @@ if(isset($_SESSION['gis-identity-session']) && file_exists($_SESSION['gis-identi
                             if($missed) {
                                 $error = "You don't have enough rights to access this site";
                             } else {
-                                $user = new \GIS\AuthProviderCombined("", "");
+                                $user = new \GIS\AuthProviderCombined("", "", VERIFY_PEER);
                                 $user->setSession($_SESSION['gis-identity-session']);
                                 try {
                                     $token = $user->getToken();

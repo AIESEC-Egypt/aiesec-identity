@@ -25,3 +25,6 @@ $SITES = array(
         )
     )
 );
+
+// Curl SSL Verify Peer
+define("VERIFY_PEER", true);

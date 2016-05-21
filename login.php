@@ -21,7 +21,7 @@ if(!is_writeable(dirname(__FILE__) . '/sessions/')) {
         $PR = new PluginRunner($ACTIVE_PLUGINS);
 
         // login to GIS
-        $user = new \GIS\AuthProviderCombined($_POST['username'], $_POST['password']);
+        $user = new \GIS\AuthProviderCombined($_POST['username'], $_POST['password'], VERIFY_PEER);
         $user->setSession(dirname(__FILE__) . '/sessions/' . md5(microtime()) . ".txt");
         try {
             $user->getToken();
