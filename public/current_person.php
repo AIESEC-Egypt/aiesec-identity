@@ -13,8 +13,8 @@ if(!isset($_GET['access_token']) || strlen($_GET['access_token']) > 255) {
     header('HTTP/1.0 401 Unauthorized');
     echo '{"error": "401", "msg": "no or invalid access token"}';
 } else {
-    require_once(dirname(__FILE__) . '/config.php');
-    require_once(dirname(__FILE__) . '/plugins/plugin.runner.php');
+    require_once(dirname(__FILE__) . '/../config.php');
+    require_once(dirname(__FILE__) . '/../plugins/plugin.runner.php');
 
     // Create connection
     $conn = mysqli_connect(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DB);

@@ -7,12 +7,17 @@
  * @version 0.2
  */
 
+ini_set("session.gc_maxlifetime", 604800);
+ini_set("session.gc_divisor", "1");
+ini_set("session.gc_probability", "1");
+session_save_path(realpath(dirname(__FILE__) . '/../sessions'));
 session_start();
+
 $error = false;
 
 if(isset($_SESSION['gis-identity-session']) && file_exists($_SESSION['gis-identity-session'])) {
-    require_once(dirname(__FILE__) . '/config.php');
-    require_once(dirname(__FILE__) . '/PHP-GIS-Wrapper/gis-wrapper/AuthProviderCombined.php');
+    require_once(dirname(__FILE__) . '/../config.php');
+    require_once(dirname(__FILE__) . '/../PHP-GIS-Wrapper/gis-wrapper/AuthProviderCombined.php');
 
     // check response type
     if(getParam('response_type') == "token") {

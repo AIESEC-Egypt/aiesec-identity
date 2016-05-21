@@ -9,20 +9,25 @@
 
 $error = false;
 
-if(!is_writeable(dirname(__FILE__) . '/sessions/')) {
+ini_set("session.gc_maxlifetime", 604800);
+ini_set("session.gc_divisor", "1");
+ini_set("session.gc_probability", "1");
+session_save_path(realpath(dirname(__FILE__) . '/../sessions'));
+
+if(!is_writeable(dirname(__FILE__) . '/../sessions/')) {
     $error = "Fatal Error. Please contact the administrator";
 } elseif($_SERVER['REQUEST_METHOD'] == "POST") {
     if(isset($_POST['username']) && isset($_POST['password'])) {
-        require_once(dirname(__FILE__) . '/plugins/plugin.runner.php');
-        require_once(dirname(__FILE__) . '/PHP-GIS-Wrapper/gis-wrapper/AuthProviderCombined.php');
-        require_once(dirname(__FILE__) . '/config.php');
+        require_once(dirname(__FILE__) . '/../plugins/plugin.runner.php');
+        require_once(dirname(__FILE__) . '/../PHP-GIS-Wrapper/gis-wrapper/AuthProviderCombined.php');
+        require_once(dirname(__FILE__) . '/../config.php');
 
         // create plugin runner
         $PR = new PluginRunner($ACTIVE_PLUGINS);
 
         // login to GIS
         $user = new \GIS\AuthProviderCombined($_POST['username'], $_POST['password'], VERIFY_PEER);
-        $user->setSession(dirname(__FILE__) . '/sessions/' . md5(microtime()) . ".txt");
+        $user->setSession(dirname(__FILE__) . '/../sessions/' . md5(microtime()) . ".txt");
         try {
             $user->getToken();
         } catch (\GIS\InvalidCredentialsException $e) {

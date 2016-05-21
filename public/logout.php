@@ -9,6 +9,10 @@
 
 $error = false;
 
+ini_set("session.gc_maxlifetime", 604800);
+ini_set("session.gc_divisor", "1");
+ini_set("session.gc_probability", "1");
+session_save_path(realpath(dirname(__FILE__) . '/../sessions'));
 session_start();
 
 require_once(dirname(__FILE__) . '/config.php');

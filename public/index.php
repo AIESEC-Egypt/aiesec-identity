@@ -7,13 +7,17 @@
  * @version 0.2
  */
 
+ini_set("session.gc_maxlifetime", 604800);
+ini_set("session.gc_divisor", "1");
+ini_set("session.gc_probability", "1");
+session_save_path(realpath(dirname(__FILE__) . '/../sessions'));
 session_start();
 
 if(!isset($_SESSION['gis-identity-session']) || !file_exists($_SESSION['gis-identity-session'])) :
     header('Location: login.php');
 else :
-    require_once(dirname(__FILE__) . '/plugins/plugin.runner.php');
-    require_once(dirname(__FILE__) . '/config.php');
+    require_once(dirname(__FILE__) . '/../plugins/plugin.runner.php');
+    require_once(dirname(__FILE__) . '/../config.php');
 
     $sites = array();
     $scopes = array();
