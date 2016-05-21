@@ -27,7 +27,7 @@ if(!is_writeable(dirname(__FILE__) . '/../sessions/')) {
 
         // login to GIS
         $user = new \GIS\AuthProviderCombined($_POST['username'], $_POST['password'], VERIFY_PEER);
-        $user->setSession(dirname(__FILE__) . '/../sessions/' . md5(microtime()) . ".txt");
+        $user->setSession(realpath(dirname(__FILE__) . '/../sessions/' . md5(microtime()) . ".txt"));
         try {
             $user->getToken();
         } catch (\GIS\InvalidCredentialsException $e) {
