@@ -15,8 +15,8 @@ ini_set("session.gc_probability", "1");
 session_save_path(realpath(dirname(__FILE__) . '/../sessions'));
 session_start();
 
-require_once(dirname(__FILE__) . '/config.php');
-require_once(dirname(__FILE__) . '/plugins/plugin.runner.php');
+require_once(dirname(__FILE__) . '/../config.php');
+require_once(dirname(__FILE__) . '/../plugins/plugin.runner.php');
 
 $conn = mysqli_connect(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DB);
 if (!$conn) {
