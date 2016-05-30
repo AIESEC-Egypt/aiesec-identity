@@ -1,0 +1,56 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "hash": "c6822b2a5e929c89dd81b2c6096ea2b5",
+    "content-hash": "14dbcd56b213f5ac2755fa2b9f056d6a",
+    "packages": [
+        {
+            "name": "kjschubert/php-gis-wrapper",
+            "version": "v0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kjschubert/PHP-GIS-Wrapper.git",
+                "reference": "4bb29ab6aa6e31e6703b9e37079d6a60edebb9ef"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kjschubert/PHP-GIS-Wrapper/zipball/4bb29ab6aa6e31e6703b9e37079d6a60edebb9ef",
+                "reference": "4bb29ab6aa6e31e6703b9e37079d6a60edebb9ef",
+                "shasum": ""
+            },
+            "require": {
+                "lib-curl": "*",
+                "php": ">=5.4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "GISwrapper\\": "src/"
+                },
+                "files": [
+                    "src/Exceptions.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "authors": [
+                {
+                    "name": "Karl Johann Schubert",
+                    "email": "karljohann@familieschubi.de"
+                }
+            ],
+            "description": "PHP library to connect your projects with AIESEC's Global Information System",
+            "time": "2016-05-30 00:10:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}

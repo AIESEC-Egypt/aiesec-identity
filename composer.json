@@ -1,0 +1,11 @@
+{
+    "require": {
+        "kjschubert/php-gis-wrapper": "^0.2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AIESEC\\Identity\\": "src/",
+            "AIESEC\\Identity\\Plugin\\": "plugins/"
+        }
+    }
+}
