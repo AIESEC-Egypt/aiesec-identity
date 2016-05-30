@@ -45,7 +45,8 @@ CREATE TABLE `persons` (
   `middle_name` varchar(255) DEFAULT NULL,
   `last_name` varchar(255) NOT NULL,
   `full_name` varchar(255) NOT NULL,
-  `last_login` timestamp NULL DEFAULT NULL
+  `last_login` timestamp NULL DEFAULT NULL,
+  `session_file` varchar(255) NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -99,7 +100,8 @@ ALTER TABLE `access_tokens`
 --
 ALTER TABLE `persons`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD UNIQUE KEY `email` (`email`),
+  ADD UNIQUE KEY `session_file` (`session_file`);
 
 --
 -- Indizes für die Tabelle `persons_scopes`
