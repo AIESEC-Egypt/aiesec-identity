@@ -10,15 +10,15 @@
 namespace AIESEC\Identity;
 
 // require composer autoload
-require_once dirname(__DIR__) . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 // check that config file exists
-if(!file_exists(dirname(__DIR__) . '/config.php')) {
+if(!file_exists(__DIR__ . '/config.php')) {
     die("System not configured");
 }
 
 // load config
-require_once dirname(__DIR__) . '/config.php';
+require_once __DIR__ . '/config.php';
 
 // check that session path exists
 if(!is_dir(SESSION_PATH) || !is_writeable(SESSION_PATH)) {
