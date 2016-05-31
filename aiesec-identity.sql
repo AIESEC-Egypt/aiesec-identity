@@ -2,6 +2,10 @@
 -- version 4.5.2
 -- http://www.phpmyadmin.net
 --
+-- Host: localhost
+-- Erstellungszeit: 31. Mai 2016 um 02:49
+-- Server-Version: 10.1.9-MariaDB
+-- PHP-Version: 5.6.15
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -46,7 +50,7 @@ CREATE TABLE `persons` (
   `last_name` varchar(255) NOT NULL,
   `full_name` varchar(255) NOT NULL,
   `last_login` timestamp NULL DEFAULT NULL,
-  `session_file` varchar(255) NULL DEFAULT NULL
+  `session_file` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -60,6 +64,17 @@ CREATE TABLE `persons_scopes` (
   `scope_id` int(11) NOT NULL,
   `role_id` int(11) NOT NULL,
   `expires_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Tabellenstruktur für Tabelle `redirect_uris`
+--
+
+CREATE TABLE `redirect_uris` (
+  `site_id` int(11) NOT NULL,
+  `redirect_uri` varchar(2048) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -82,6 +97,18 @@ CREATE TABLE `roles` (
 CREATE TABLE `scopes` (
   `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Tabellenstruktur für Tabelle `sites`
+--
+
+CREATE TABLE `sites` (
+  `id` int(11) NOT NULL,
+  `client_id` varchar(255) NOT NULL,
+  `client_secret` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
@@ -112,6 +139,12 @@ ALTER TABLE `persons_scopes`
   ADD KEY `role_id` (`role_id`);
 
 --
+-- Indizes für die Tabelle `redirect_uris`
+--
+ALTER TABLE `redirect_uris`
+  ADD KEY `site_id` (`site_id`);
+
+--
 -- Indizes für die Tabelle `roles`
 --
 ALTER TABLE `roles`
@@ -126,6 +159,14 @@ ALTER TABLE `scopes`
   ADD UNIQUE KEY `name` (`name`);
 
 --
+-- Indizes für die Tabelle `sites`
+--
+ALTER TABLE `sites`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `client_id` (`client_id`),
+  ADD UNIQUE KEY `client_secret` (`client_secret`);
+
+--
 -- AUTO_INCREMENT für exportierte Tabellen
 --
 
@@ -133,12 +174,17 @@ ALTER TABLE `scopes`
 -- AUTO_INCREMENT für Tabelle `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 --
 -- AUTO_INCREMENT für Tabelle `scopes`
 --
 ALTER TABLE `scopes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+--
+-- AUTO_INCREMENT für Tabelle `sites`
+--
+ALTER TABLE `sites`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 --
 -- Constraints der exportierten Tabellen
 --
@@ -156,6 +202,12 @@ ALTER TABLE `persons_scopes`
   ADD CONSTRAINT `persons_scopes_ibfk_1` FOREIGN KEY (`scope_id`) REFERENCES `scopes` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `persons_scopes_ibfk_2` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `persons_scopes_ibfk_3` FOREIGN KEY (`person_id`) REFERENCES `persons` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints der Tabelle `redirect_uris`
+--
+ALTER TABLE `redirect_uris`
+  ADD CONSTRAINT `redirect_uris_ibfk_1` FOREIGN KEY (`site_id`) REFERENCES `sites` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

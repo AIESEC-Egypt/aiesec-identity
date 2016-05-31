@@ -20,6 +20,7 @@ class LoginController
      * @param String $username
      * @param String $password
      * @param string $type optional 'EXPA' or 'OP' to use those AuthProviders. Standard is 'combined'.
+     * @throws Error
      */
     public static function login($username, $password, $type = "combined") {
         // create right Authentication Provider
@@ -65,15 +66,7 @@ class LoginController
 
         // check if person exists
         if(!PersonController::existsLoginUpdate($current_person->person->id, $user->getSession())) {
-            if(DBController::hasError()) {
-                Template::run('error', ['code' => 500, 'message' => 'Database Error']);
-                return false;
-            } else {
-                // create person if it does not exist
-                if(!PersonController::firstLogin($user, $current_person, $user->getSession())) {
-                    return false;
-                }
-            }
+            PersonController::firstLogin($user, $current_person, $user->getSession());
         }
         
         // run Login Hook
@@ -93,48 +86,46 @@ class LoginController
             // redirect
             header('Location: ' . $redirect);
         } else {
-            Template::run('error', ['code' => 500, 'message' => 'Plugin prevented login']);
+            throw new Error(500, "Plugin prevented login");
         }
     }
 
     /**
-     * @return void
+     * @throws Error
      */
     public static function logout() {
         if(Plugins::onBeforeLogout($_SESSION['person_id'])) {
             // delete all access tokens of that person from the database
-            if(DBController::delete("DELETE FROM `access_tokens` WHERE `person_id`='" . intval($_SESSION['person_id']) . "' OR `expires_at` <= NOW()") === TRUE) {
-                // remove GIS Identity Session
-                if(file_exists($_SESSION['gis-identity-session'])) {
-                    unlink($_SESSION['gis-identity-session']);
-                }
+            DBController::delete("DELETE FROM `access_tokens` WHERE `person_id`='" . intval($_SESSION['person_id']) . "' OR `expires_at` <= NOW()");
 
-                // Unset all of the session variables.
-                $_SESSION = array();
+            // remove GIS Identity Session
+            if(file_exists($_SESSION['gis-identity-session'])) {
+                unlink($_SESSION['gis-identity-session']);
+            }
 
-                // If it's desired to kill the session, also delete the session cookie.
-                // Note: This will destroy the session, and not just the session data!
-                if (ini_get("session.use_cookies")) {
-                    $params = session_get_cookie_params();
-                    setcookie(session_name(), '', time() - 42000,
-                        $params["path"], $params["domain"],
-                        $params["secure"], $params["httponly"]
-                    );
-                }
+            // Unset all of the session variables.
+            $_SESSION = array();
 
-                // Finally, destroy the session.
-                session_destroy();
+            // If it's desired to kill the session, also delete the session cookie.
+            // Note: This will destroy the session, and not just the session data!
+            if (ini_get("session.use_cookies")) {
+                $params = session_get_cookie_params();
+                setcookie(session_name(), '', time() - 42000,
+                    $params["path"], $params["domain"],
+                    $params["secure"], $params["httponly"]
+                );
+            }
 
-                if(Plugins::onAfterLogout()) {
-                    header('Location: index.php?action=login');
-                } else {
-                    Template::run('error', ['code' => 500, 'message' => 'Logged out from the system, but some plugins failed']);
-                }
+            // Finally, destroy the session.
+            session_destroy();
+
+            if(Plugins::onAfterLogout()) {
+                header('Location: index.php?action=login');
             } else {
-                Template::run('error', ['code' => 500, 'message' => 'Database Error']);
+                throw new Error(500, "Logged out from the system, but some plugins failed");
             }
         } else {
-            Template::run('error', ['code' => 500, 'message' => 'plugin prevented logout']);
+            throw new Error(500, "Plugin prevented logout");
         }
     }
 }

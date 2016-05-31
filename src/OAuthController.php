@@ -1,5 +1,6 @@
 <?php
 namespace AIESEC\Identity;
+
 use Exception;
 use GISwrapper\AuthProviderCombined;
 use GISwrapper\AuthProviderEXPA;
@@ -59,15 +60,96 @@ class OAuthController
     }
 
     /**
+     * the custom token flow is a not official specified flow which allows permitted clients to retrieve an access token for a specified person even if this person is not active currently
+     * this only works when the GIS Identity session is still valid
+     *
+     * @param string $clientId
+     * @param string $clientSecret
+     * @param int $userId
+     * @param string $state
+     * @return bool
+     * @throws Error
+     */
+    public static function customTokenFlow($clientId, $clientSecret, $userId, $state) {
+        // check that client secret is correct
+        if(self::checkClientSecret($clientId, $clientSecret)) {
+            // get the session file
+            $data = DBController::query("SELECT `session_file` FROM `persons` WHERE `id`=" . intval($userId))->fetch_row();
+
+            // check if the session file still exists
+            if(isset($data[0]) && file_exists($data[0])) {
+                $error = null;
+
+                // try to generate a token, save any Exception to check if there are any valid access tokens in the database before we throw it
+                try {
+                    $token = self::getToken($data[0]);
+                } catch(Exception $e) {
+                    $error = $e;
+                }
+
+                // when we didn't got a token
+                if(!is_array($token) || !is_null($error)) {
+                    // try to get a token from the database
+                    $res = DBController::query("SELECT `access_token`, UNIX_TIMESTAMP(`expires_at`) FROM `access_tokens` WHERE `person_id`=" . intval($userId) . " AND `expires_at` > NOW() ORDER BY `expires_at` DESC LIMIT 1");
+                    if ($res->num_rows === 1) {
+                        $token = $res;
+                    } else {
+                        if ($error === null) {
+                            Template::run('error', ['code' => 503, 'message' => 'no token available']);
+                        } else {
+                            if ($e instanceof InvalidCredentialsException) {
+                                unlink($data[0]);
+                                Template::run('error', ['code' => 503, 'message' => 'no valid session for this user available']);
+                            } else {
+                                throw $error;
+                            }
+                        }
+                        return false;
+                    }
+                }
+
+                $data = ['data' => ['user_id' => $userId, 'access_token' => $token[0], 'expires_at' => date('c', $token[1]), 'expires_in' => ($token[1]) - time()]];
+
+                Template::output(json_encode($data));
+
+                return true;
+            } else {
+                Template::run('error', ['code' => 503, 'message' => 'no session for this user available']);
+                return false;
+            }
+        } else {
+            throw new Error(401, "wrong client secret or client id not authorized to use this flow.");
+        }
+    }
+
+    /**
      * Check that the redirect uri is allowed for the cliend id
      *
      * @param string $clientId
      * @param string $redirectUri
      * @return bool
+     * @throws Error
      */
-    public static function checkRedirectUri($clientId, $redirectUri) {
+    private static function checkRedirectUri($clientId, $redirectUri) {
         $res = DBController::query("SELECT COUNT(*) FROM `sites` LEFT JOIN `redirect_uris` ON `redirect_uris`.`site_id`=`sites`.`id` WHERE `sites`.`client_id`='" . DBController::escape($clientId) . "' AND `redirect_uris`.`redirect_uri` LIKE '" . DBController::escape($redirectUri) . "%'");
-        if($res && $res->num_rows > 0 && $res->fetch_row()[0] > 0) {
+        if($res->num_rows > 0 && $res->fetch_row()[0] > 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * check that clientId and clientSecret match
+     *
+     * @param $clientId
+     * @param $clientSecret
+     * @return bool
+     * @throws Error
+     */
+    private static function checkClientSecret($clientId, $clientSecret) {
+        $res = DBController::query("SELECT COUNT(*) FROM `sites` WHERE `client_id`='" . DBController::escape($clientId) . "' AND `client_secret` = SHA1('" . DBController::escape($clientSecret) . "')");
+        if($res->num_rows > 0 && $res->fetch_row()[0] > 0) {
             return true;
         } else {
             return false;
@@ -81,30 +163,34 @@ class OAuthController
      * @param string $expected
      * @return bool
      */
-    public static function checkScopes($actual, $expected) {
+    private static function checkScopes($actual, $expected) {
+        // check if there are scopes expected
         if(strlen($expected) > 0) {
+            // explode scopes into an array. They are divided by a whitespace
             $needed = explode(" ", $expected);
-            $ok = true;
+
+            // check for each expected scope
             foreach ($needed as $scope) {
-                if ($ok) {
-                    if (strpos($scope, ':') > 1) {
-                        $s = explode(':', $scope);
-                        if (!isset($actual[$s[0]])) {
-                            $ok = false;
-                        } elseif (!in_array($s[1], $actual[$s[0]])) {
-                            $ok = false;
-                        }
-                    } else {
-                        if (!isset($actual[$scope])) $ok = false;
+                if (strpos($scope, ':') > 1) {  // if there is a specific role requested (via scope:role)
+                    // get the role
+                    $s = explode(':', $scope);
+
+                    if (!isset($actual[$s[0]])) {
+                        // return false if user not even have the scope
+                        return false;
+                    } elseif (!in_array($s[1], $actual[$s[0]])) {
+                        // otherwise return false if the user is missing the role in the scope
+                        return false;
                     }
-                } else {
-                    break;
+                } else {    // if just the scope is needed
+                    if (!isset($actual[$scope])) {
+                        // return false if user does not have the scope
+                        return false;
+                    }
                 }
             }
-            return $ok;
-        } else {
-            return true;
         }
+        return true;
     }
 
     /**
@@ -115,7 +201,7 @@ class OAuthController
      * @return array|bool
      * @throws InvalidCredentialsException
      */
-    public static function getToken($session, $type = 'combined') {
+    private static function getToken($session, $type = 'combined') {
         // create right Authentication Provider
         switch($type) {
             case 'EXPA':
@@ -153,10 +239,7 @@ class OAuthController
                 break;
         }
 
-        if(PersonController::addAccessToken($token, $user->getExpiresAt(), $current_person)) {
-            return [$token, $user->getExpiresAt()];
-        } else {
-            return false;
-        }
+        PersonController::addAccessToken($token, $user->getExpiresAt(), $current_person);
+        return [$token, $user->getExpiresAt()];
     }
 }

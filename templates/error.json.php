@@ -1,6 +1,6 @@
 {
     "status": {
-        <?php if(isset($code)) echo '"code": "' . $code . '"'; ?>
-        <?php if(isset($error)) echo '"message": "' . $error . '"'; ?>
+        <?php if(isset($code)) echo '"code": "' . $code . '",' . PHP_EOL; ?>
+        <?php if(isset($message)) echo '"message": "' . $message . '"' . PHP_EOL; ?>
     }
 }

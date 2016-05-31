@@ -4,6 +4,7 @@
  * main controller for AIESEC identity
  *
  * @author Karl Johann Schubert <karljohann@familieschubi.de>
+ * @package AIESEC\Identity
  * @version 0.2
  */
 namespace AIESEC\Identity;
@@ -44,73 +45,85 @@ if(!isset($ACTIVE_PLUGINS)) {
 Plugins::init($ACTIVE_PLUGINS);
 
 // run the action
-switch(getParam('action', 'me')) {
-    case 'login':
-        if($_SERVER['REQUEST_METHOD'] == "POST") {
-            LoginController::login($_POST['username'], $_POST['password']);
-        } else {
-            Template::run('loginform', ['title' => 'login']);
-        }
-        break;
-
-    case 'logout':
-        LoginController::logout();
-        break;
-
-    case 'authorize':
-        if(isset($_SESSION['gis-identity-session']) && file_exists($_SESSION['gis-identity-session'])) {
-            switch(getParam('response_type')) {
-                case 'token':
-                    OAuthController::tokenFlow(getParam('client_id'), getParam('redirect_uri'), getParam('scope'), getParam('state'));
-                    break;
-
-                default:
-                    Template::run('error', ['error' => 'Response type not implemented']);
-            }
-        } else {
-            $_SESSION = array();
-            $_SESSION['redirect'] = 'index.php?action=authorize&response_type=' . urlencode(getParam('response_type')) . '&redirect_uri=' . urlencode(getParam('redirect_uri')) . '&client_id=' . urlencode(getParam('client_id')) . '&scope=' . urlencode(getParam('scope')) . '&state=' . urlencode(getParam('state'));
-            header('Location: index.php?action=login');
-        }
-        break;
-
-    case 'current_person':
-        Template::$json = true;
-        if(!isset($_GET['access_token']) || strlen($_GET['access_token']) > 255) {
-            header('HTTP/1.0 401 Unauthorized');
-            Template::run('error', ['code' => 401, 'message' => 'no or invalid access token']);
-        } else {
-            $p = PersonController::currentPerson($_GET['access_token']);
-            if($p !== false) {
-                Template::output(json_encode($p));
+try {
+    switch (getParam('action', 'me')) {
+        case 'login':
+            if ($_SERVER['REQUEST_METHOD'] == "POST") {
+                LoginController::login($_POST['username'], $_POST['password']);
             } else {
-                Template::run('error', ['code' => 500, 'message' => 'Server Error']);
+                Template::run('loginform', ['title' => 'login']);
             }
-        }
-        break;
+            break;
 
-    case 'me':
-        if(!isset($_SESSION['gis-identity-session']) || !file_exists($_SESSION['gis-identity-session'])) {
-            header('Location: index.php?action=login');
-        } else {
-            $scopes = PersonController::getScopes($_SESSION['person_id']);
-            if(is_array($scopes)) {
-                $sites = Plugins::onListSites($scopes, $_SESSION['person_id']);
-                if($sites === false) {
-                    Template::run('error', ['code' => 500, 'message' => 'Plugin failure']);
-                } else {
-                    Template::run('me', ['scopes' => $scopes, 'sites' => $sites]);
+        case 'logout':
+            LoginController::logout();
+            break;
+
+        case 'authorize':
+            if (isset($_SESSION['gis-identity-session']) && file_exists($_SESSION['gis-identity-session'])) {
+                switch (getParam('response_type')) {
+                    case 'token':
+                        OAuthController::tokenFlow(getParam('client_id'), getParam('redirect_uri'), getParam('scope'), getParam('state'));
+                        break;
+
+                    case 'customToken':
+                        Template::$json = true;
+                        OAuthController::customTokenFlow(getParam('client_id'), getParam('client_secret'), getParam('user_id'), getParam('state'));
+                        break;
+
+                    default:
+                        Template::run('error', ['code' => 400, 'message' => 'Response type not implemented']);
                 }
             } else {
-                Template::run('error', ['code' => 500, 'message' => 'There was an error']);
+                $_SESSION = array();
+                $_SESSION['redirect'] = 'index.php?action=authorize&response_type=' . urlencode(getParam('response_type')) . '&redirect_uri=' . urlencode(getParam('redirect_uri')) . '&client_id=' . urlencode(getParam('client_id')) . '&scope=' . urlencode(getParam('scope')) . '&state=' . urlencode(getParam('state'));
+                header('Location: index.php?action=login');
             }
-        }
-        break;
+            break;
 
-    default:
-        Template::run('error', ['error' => 'action not implemented']);
-        break;
+        case 'current_person':
+            Template::$json = true;
+            if (!isset($_GET['access_token']) || strlen($_GET['access_token']) > 255) {
+                header('HTTP/1.0 401 Unauthorized');
+                Template::run('error', ['code' => 401, 'message' => 'no or invalid access token']);
+            } else {
+                $p = PersonController::currentPerson($_GET['access_token']);
+                if ($p !== false) {
+                    Template::output(json_encode($p));
+                } else {
+                    Template::run('error', ['code' => 500, 'message' => 'Server Error']);
+                }
+            }
+            break;
+
+        case 'me':
+            if (!isset($_SESSION['gis-identity-session']) || !file_exists($_SESSION['gis-identity-session'])) {
+                header('Location: index.php?action=login');
+            } else {
+                $scopes = PersonController::getScopes($_SESSION['person_id']);
+                if (is_array($scopes)) {
+                    $sites = Plugins::onListSites($scopes, $_SESSION['person_id']);
+                    if ($sites === false) {
+                        Template::run('error', ['code' => 500, 'message' => 'Plugin failure']);
+                    } else {
+                        Template::run('me', ['scopes' => $scopes, 'sites' => $sites]);
+                    }
+                } else {
+                    Template::run('error', ['code' => 500, 'message' => 'There was an error']);
+                }
+            }
+            break;
+
+        default:
+            Template::run('error', ['error' => 'action not implemented']);
+            break;
+    }
+    DBController::cleanUp();
+} catch (Error $e) {
+    $e->output();
 }
+
+
 
 function getParam($name, $default = "") {
     if(isset($_GET[$name])) {
