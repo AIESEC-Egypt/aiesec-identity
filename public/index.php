@@ -115,7 +115,7 @@ try {
             break;
 
         default:
-            Template::run('error', ['error' => 'action not implemented']);
+            Template::run('error', ['code' => 404, 'message' => 'action not implemented']);
             break;
     }
     DBController::cleanUp();
