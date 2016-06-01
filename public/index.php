@@ -68,6 +68,7 @@ try {
 
                     case 'customToken':
                         Template::$json = true;
+                        header("Access-Control-Allow-Origin: *");
                         OAuthController::customTokenFlow(getParam('client_id'), getParam('client_secret'), getParam('user_id'), getParam('state'));
                         break;
 
@@ -83,6 +84,7 @@ try {
 
         case 'current_person':
             Template::$json = true;
+            header("Access-Control-Allow-Origin: *");
             if (!isset($_GET['access_token']) || strlen($_GET['access_token']) > 255) {
                 header('HTTP/1.0 401 Unauthorized');
                 Template::run('error', ['code' => 401, 'message' => 'no or invalid access token']);
