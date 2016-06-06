@@ -25,37 +25,43 @@ class OAuthController
      * @param String $scopes
      */
     public static function tokenFlow($clientId, $redirectUri, $scopes, $state) {
-        // check that the redirect url is allowed for the client id
-        if(self::checkRedirectUri($clientId, $redirectUri)) {
-            // get the actual scopes of the current user
-            $actual = PersonController::getScopes($_SESSION['person_id']);
-            if(is_array($actual)) {
-                // check that the user has the needed scopes
-                if(self::checkScopes($actual, $scopes)) {
-                    // generate token
-                    try {
-                        $token = self::getToken($_SESSION['gis-identity-session']);
-                    } catch (InvalidCredentialsException $e) {
-                        unlink($_SESSION['gis-identity-session']);
-                        $_SESSION = array();
-                        $_SESSION['redirect'] = 'index.php?action=authorize&response_type=token&redirect_uri=' . urlencode($redirectUri) . '&client_id=' . urlencode($clientId) . '&scope=' . urlencode($scopes) . '&state=' . urlencode($state);
-                        header('Location: index.php?action=login');
-                    }
+        if (!isset($_SESSION['gis-identity-session']) || !file_exists($_SESSION['gis-identity-session'])) {
+            $_SESSION = array();
+            $_SESSION['redirect'] = 'index.php?action=authorize&response_type=token&redirect_uri=' . urlencode($redirectUri) . '&client_id=' . urlencode($clientId) . '&scope=' . urlencode($scopes) . '&state=' . urlencode($state);
+            header('Location: index.php?action=login');
+        } else {
+            // check that the redirect url is allowed for the client id
+            if (self::checkRedirectUri($clientId, $redirectUri)) {
+                // get the actual scopes of the current user
+                $actual = PersonController::getScopes($_SESSION['person_id']);
+                if (is_array($actual)) {
+                    // check that the user has the needed scopes
+                    if (self::checkScopes($actual, $scopes)) {
+                        // generate token
+                        try {
+                            $token = self::getToken($_SESSION['gis-identity-session']);
+                        } catch (InvalidCredentialsException $e) {
+                            unlink($_SESSION['gis-identity-session']);
+                            $_SESSION = array();
+                            $_SESSION['redirect'] = 'index.php?action=authorize&response_type=token&redirect_uri=' . urlencode($redirectUri) . '&client_id=' . urlencode($clientId) . '&scope=' . urlencode($scopes) . '&state=' . urlencode($state);
+                            header('Location: index.php?action=login');
+                        }
 
-                    // check token
-                    if($token === false) {
-                        Template::run('error', ['code' => 500, 'message' => 'Could not retrieve token']);
+                        // check token
+                        if ($token === false) {
+                            Template::run('error', ['code' => 500, 'message' => 'Could not retrieve token']);
+                        } else {
+                            header('Location: ' . $redirectUri . '?access_token=' . $token[0] . '&expires_at=' . urlencode(date('c', $token[1])) . '&expires_in=' . ($token[1] - time()) . '&state=' . urlencode($state));
+                        }
                     } else {
-                        header('Location: ' . $redirectUri . '?access_token=' . $token[0] . '&expires_at=' . urlencode(date('c', $token[1])) . '&expires_in=' . ($token[1] - time()) . '&state=' . urlencode($state));
+                        Template::run('error', ['code' => 403, 'message' => 'You do not have enough rights to access this site']);
                     }
                 } else {
-                    Template::run('error', ['code' => 403, 'message' => 'You do not have enough rights to access this site']);
+                    Template::run('error', ['code' => 500, 'message' => 'Could not retrieve the users scopes']);
                 }
             } else {
-                Template::run('error', ['code' => 500, 'message' => 'Could not retrieve the users scopes']);
+                Template::run('error', ['code' => 400, 'message' => 'invalid client id or redirect uri']);
             }
-        } else {
-            Template::run('error', ['code' => 400, 'message' => 'invalid client id or redirect uri']);
         }
     }
 

@@ -60,25 +60,19 @@ try {
             break;
 
         case 'authorize':
-            if (isset($_SESSION['gis-identity-session']) && file_exists($_SESSION['gis-identity-session'])) {
-                switch (getParam('response_type')) {
-                    case 'token':
-                        OAuthController::tokenFlow(getParam('client_id'), getParam('redirect_uri'), getParam('scope'), getParam('state'));
-                        break;
+            switch (getParam('response_type')) {
+                case 'token':
+                    OAuthController::tokenFlow(getParam('client_id'), getParam('redirect_uri'), getParam('scope'), getParam('state'));
+                    break;
 
-                    case 'customToken':
-                        Template::$json = true;
-                        header("Access-Control-Allow-Origin: *");
-                        OAuthController::customTokenFlow(getParam('client_id'), getParam('client_secret'), getParam('user_id'), getParam('state'));
-                        break;
+                case 'customToken':
+                    Template::$json = true;
+                    header("Access-Control-Allow-Origin: *");
+                    OAuthController::customTokenFlow(getParam('client_id'), getParam('client_secret'), getParam('user_id'), getParam('state'));
+                    break;
 
-                    default:
-                        Template::run('error', ['code' => 400, 'message' => 'Response type not implemented']);
-                }
-            } else {
-                $_SESSION = array();
-                $_SESSION['redirect'] = 'index.php?action=authorize&response_type=' . urlencode(getParam('response_type')) . '&redirect_uri=' . urlencode(getParam('redirect_uri')) . '&client_id=' . urlencode(getParam('client_id')) . '&scope=' . urlencode(getParam('scope')) . '&state=' . urlencode(getParam('state'));
-                header('Location: index.php?action=login');
+                default:
+                    Template::run('error', ['code' => 400, 'message' => 'Response type not implemented']);
             }
             break;
 
